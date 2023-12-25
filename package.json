@@ -1,0 +1,20 @@
+{
+  "name": "cryptpad_signupcounter",
+  "version": "0.1.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "dev": "npm exec ts-node-dev lib.ts",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "selenium-webdriver": "^4.16.0",
+    "ts-node": "^10.9.2"
+  },
+  "devDependencies": {
+    "@types/selenium-webdriver": "^4.1.21",
+    "ts-node-dev": "^2.0.0"
+  }
+}
