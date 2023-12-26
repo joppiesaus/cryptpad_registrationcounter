@@ -1,6 +1,6 @@
-// const { Builder, By, until } = require("selenium-webdriver");
 import { Builder, By, ChromiumWebDriver, until } from "selenium-webdriver";
 import chrome from  "selenium-webdriver/chrome";
+import fs from "node:fs/promises";
 
 const URL = process.env.CP_URL ?? "none"; // TODO
 
@@ -55,4 +55,50 @@ const main = async function() {
 
 };
 
-main();
+// main();
+
+/**
+ * Sums up the registrations of a CSV file in a specific format
+ * @param data entire CSV file as a string
+ * @returns the sum
+ */
+let parse = function(data: string): number {
+
+    const lines = data.split("\n");
+    let sum = 0;
+
+    for (const line of lines) {
+
+        const cols = line.split(",");
+
+        if (cols.length < 4) {
+            continue;
+        }
+
+        const value = parseInt(cols[2]);
+
+        if (!Number.isNaN(value)) {
+            sum += parseInt(cols[2])
+        }
+
+    }
+
+    return sum;
+
+}
+
+let parseCSVFile = async function(filename: string): Promise<number> {
+
+    try {
+        const data = await fs.readFile(filename, { encoding: "utf8" } );
+
+        return parse(data);
+
+    } catch (e) {
+        console.error(e);
+        throw e;
+    }
+    return NaN;
+}
+
+parseCSVFile("a.csv");
