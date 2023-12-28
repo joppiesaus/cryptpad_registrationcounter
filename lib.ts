@@ -1,4 +1,4 @@
-import { Builder, By, ChromiumWebDriver, until } from "selenium-webdriver";
+import { Builder, By, until } from "selenium-webdriver";
 import chrome from  "selenium-webdriver/chrome";
 import fs from "node:fs/promises";
 
@@ -42,6 +42,28 @@ const main = async function() {
 
         csvDownloadButton.click();
 
+        // TODO: race condition, though very unlikely
+        // ideally, poll until we find the CSV file(or certain timeout is reached)
+        setTimeout( async () => {
+
+            const filename = `${(await driver.getTitle()).replace(' ', '-')}.csv`;
+            try {
+                const sum = await parseCSVFile(filename);
+                console.log(sum);
+            } catch (e) {
+                console.log(`Failed to parse CSV file: ${e}`);
+                return;
+            }
+
+            try {
+                // we are done, remove the file
+                await fs.unlink(filename);
+            } catch(e) {
+                console.log(`Failed to delete CSV file: ${e}`);
+            }
+
+        }, 200 );
+
 
     // } catch (e) {
 
@@ -64,7 +86,8 @@ const main = async function() {
  */
 let parse = function(data: string): number {
 
-    const lines = data.split("\n");
+    // bad for memory usage but whatever, need to skip the first line
+    const lines = data.split("\n").slice(1);
     let sum = 0;
 
     for (const line of lines) {
@@ -101,4 +124,5 @@ let parseCSVFile = async function(filename: string): Promise<number> {
     return NaN;
 }
 
-parseCSVFile("a.csv");
+// parseCSVFile("a.csv");
+main();
