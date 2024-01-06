@@ -5,6 +5,8 @@ TODO download chrome webdriver: https://googlechromelabs.github.io/chrome-for-te
 
 NOTE: requires env with a PWD.
 
+TODO CP_URL and TG_TOKEN
+
 ```sh
 # tODO: nvm install
 sudo apt-get install chromium-browser -y

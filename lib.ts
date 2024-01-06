@@ -2,9 +2,17 @@ import { Builder, By, WebDriver, until } from "selenium-webdriver";
 import chrome from  "selenium-webdriver/chrome";
 import fs from "node:fs/promises";
 
-const URL = process.env.CP_URL ?? "none"; // TODO
+export const URL = process.env.CP_URL ?? "none"; // TODO
 
-const getAmountOfRegistrationsByWebpage = async function(driver: WebDriver): Promise<number> {
+// TODO: clean up this stuff
+
+export interface ProcessOptions
+{
+    requiresLocalStorageParsing?: boolean, // true if it needs localStorage parsing.
+    ignoreLock?: boolean, // if true, will ignore the lock, i.e. will allow running multiple instances at the same time
+};
+
+export const getAmountOfRegistrationsByWebpage = async function(driver: WebDriver): Promise<number> {
 
     let dropdownButton = driver.findElement(By.css(".cp-form-creator-results-controls .cp-dropdown-container .btn.btn-primary"));
 
@@ -18,15 +26,16 @@ const getAmountOfRegistrationsByWebpage = async function(driver: WebDriver): Pro
 
     // TODO: race condition, though very unlikely
     // ideally, poll until we find the CSV file(or certain timeout is reached)
-    setTimeout( async () => {
+    await new Promise(resolve => setTimeout( async () => {
 
         const filename = `${(await driver.getTitle()).replace(' ', '-')}.csv`;
         try {
             sum = await parseCSVFile(filename);
             console.log(sum);
+            resolve(sum);
         } catch (e) {
             console.log(`Failed to parse CSV file: ${e}`);
-            return;
+            return NaN;
         }
 
         try {
@@ -36,17 +45,17 @@ const getAmountOfRegistrationsByWebpage = async function(driver: WebDriver): Pro
             console.log(`Failed to delete CSV file: ${e}`);
         }
 
-    }, 200 );
+    }, 200 ));
 
     return sum;
 
 }
 
 /**
- * Deletes the form responses. Requires authentication. DESTRUCTIVE FUNCTION
+ * Deletes the form responses. Requires authentication/localStorage parsing. DESTRUCTIVE FUNCTION.
  * @param driver 
  */
-const deleteFormResponses = async function(driver: WebDriver) {
+export const deleteFormResponses = async function(driver: WebDriver) {
 
     let deleteButton = await driver.findElement(By.css(".cp-form-creator-results-controls .btn.cp-form-results-delete"));
 
@@ -64,74 +73,109 @@ const deleteFormResponses = async function(driver: WebDriver) {
 
 };
 
-const main = async function() {
+export class RequestManager {
 
-    let options = new chrome.Options();
-    options.setUserPreferences({
-        "download.default_directory": process.env.PWD
-    });
-//     options.addArguments("--headless=new");
+    private isProcessing: boolean;
 
-    let driver = await new Builder()
-        .forBrowser("chrome")
-        .setChromeOptions(options)
-        .build();
+    constructor() {
+        this.isProcessing = false;
+    }
 
-    try {
+    /**
+     * Executes something on the cryptpad form results.
+     */
+    public async executeScriptTask(
+            internalCode: (driver: WebDriver) => Promise<any>,
+            pOptions?: ProcessOptions ): Promise<any>
+        {
 
-        await driver.get(URL);
+        if (this.isProcessing === true && !(pOptions?.ignoreLock === true)) {
 
-        await parseLocalStorage(driver, "credentials.json");
+            throw Error("an operation is already pending, try again in a minute");
+            return;
 
-        // console.log(await driver.getTitle())
-        if (await driver.getTitle() === "cryptpad_registrationcounter: FAILED TO PARSE localStorage JSON") {
-            throw Error("Failed to parse localStorage JSON: " + await driver.findElement(By.css("body")).getText());
         }
 
-        await driver.manage().setTimeouts({ implicit: 5000 }); // wait 5 seconds
+        this.isProcessing = true;
 
-        await driver.wait(until.elementLocated(By.id("sbox-iframe")), 10000);
+        let options = new chrome.Options();
+        options.setUserPreferences({
+            "download.default_directory": process.env.PWD
+        });
+        options.addArguments("--headless=new");
 
-        let iframe = await driver.findElement(By.id("sbox-iframe"));
+        let driver = await new Builder()
+            .forBrowser("chrome")
+            .setChromeOptions(options)
+            .build();
 
-        driver.switchTo().frame(iframe);
+        let result: null | any = null;
 
         try {
 
-            await driver.wait(until.elementLocated(By.css(".cp-form-creator-results-controls .cp-dropdown-container .btn.btn-primary")), 10000);
+            await driver.get(URL);
+
+            if (pOptions?.requiresLocalStorageParsing) {
+
+                await parseLocalStorage(driver, "credentials.json");
+
+                // console.log(await driver.getTitle())
+                if (await driver.getTitle() === "cryptpad_registrationcounter: FAILED TO PARSE localStorage JSON") {
+                    throw Error("Failed to parse localStorage JSON: " + await driver.findElement(By.css("body")).getText());
+                }
+
+            }
+
+            await driver.manage().setTimeouts({ implicit: 5000 }); // wait 5 seconds
+
+            await driver.wait(until.elementLocated(By.id("sbox-iframe")), 10000);
+
+            let iframe = await driver.findElement(By.id("sbox-iframe"));
+
+            driver.switchTo().frame(iframe);
+
+            try {
+
+                await driver.wait(until.elementLocated(By.css(".cp-form-creator-results-controls .cp-dropdown-container .btn.btn-primary")), 10000);
+
+            } catch (e) {
+
+                // if it fails, check for no responses. Else, raise again.
+                const noResponsesBy = By.css(".cp-form-creator-results .alert");
+
+                await driver.wait(until.elementLocated(noResponsesBy), 1000);
+
+                const noResponsesEl = await driver.findElement(noResponsesBy);
+
+                if (await noResponsesEl.getText() === "There are no responses") {
+                    throw Error("No responses");
+                } else {
+                    throw Error(`weird error, can find the noResponsesEl but text is: ${await noResponsesEl.getText()}`);
+                }
+
+            }
+
+            result = await internalCode(driver);
 
         } catch (e) {
 
-            // if it fails, check for no responses. Else, raise again.
-            const noResponsesBy = By.css(".cp-form-creator-results .alert");
+            console.error(e);
+            throw e;
 
-            await driver.wait(until.elementLocated(noResponsesBy), 1000);
+        } finally {
 
-            const noResponsesEl = await driver.findElement(noResponsesBy);
-
-            if (await noResponsesEl.getText() === "There are no responses") {
-                throw Error("No responses");
-            } else {
-                throw Error(`weird error, can find the noResponsesEl but text is: ${await noResponsesEl.getText()}`);
-            }
+            await driver.quit();
+            this.isProcessing = false;
 
         }
 
-        await getAmountOfRegistrationsByWebpage(driver);
-
-        // await deleteFormResponses(driver);
-
-    } catch (e) {
-
-        console.error(e);
-
-    } finally {
-
-        // await driver.quit();
+        if (result !== null) {
+            return result;
+        }
 
     }
 
-};
+}
 
 /**
  * Sums up the registrations of a CSV file in a specific format
@@ -177,9 +221,6 @@ let parseCSVFile = async function(filename: string): Promise<number> {
     }
     return NaN;
 }
-
-// parseCSVFile("a.csv");
-main();
 
 let parseLocalStorage = async function(driver: WebDriver, filename: string) {
     try {
