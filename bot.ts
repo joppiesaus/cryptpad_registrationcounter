@@ -4,12 +4,18 @@ import { WebDriver } from "selenium-webdriver";
 import { schedule } from "node-cron";
 
 const bot = new Bot(process.env.TG_TOKEN ?? "none lol");
-const channelId = parseInt(process.env.TG_CHANNEL_ID ?? "-1");
 
 const reqManager = new RequestManager();
 
 // so much for DRY
 async function checkRegistrationsAndSendToChannel() {
+
+    if ( process.env.TG_CHANNEL_ID === undefined ) {
+        console.warn("Tried to check registrations and send to the channel, but TG_CHANNEL_ID was not specified.")
+        return;
+    }
+
+    const channelId = parseInt(process.env.TG_CHANNEL_ID);
 
     try {
 
