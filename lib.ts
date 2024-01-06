@@ -4,7 +4,8 @@ import fs from "node:fs/promises";
 
 export const URL = process.env.CP_URL ?? "none"; // TODO
 
-// TODO: clean up this stuff
+const REGISTRATION_COLUMN = 2; // the 0-indexed column in the CSV file where you can find the amount of registrations
+const TOTAL_COLUMNS = 4; // the desired amount of columns in the CSV file.
 
 export interface ProcessOptions
 {
@@ -192,14 +193,14 @@ let parse = function(data: string): number {
 
         const cols = line.split(",");
 
-        if (cols.length < 4) {
+        if (cols.length < TOTAL_COLUMNS) {
             continue;
         }
 
-        const value = parseInt(cols[2]);
+        const value = parseInt(cols[REGISTRATION_COLUMN]);
 
         if (!Number.isNaN(value)) {
-            sum += parseInt(cols[2])
+            sum += value;
         }
 
     }
