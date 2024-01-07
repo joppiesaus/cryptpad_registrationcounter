@@ -1,8 +1,8 @@
 import { Builder, By, WebDriver, until } from "selenium-webdriver";
-import chrome from  "selenium-webdriver/chrome";
+import chrome from "selenium-webdriver/chrome";
 import fs from "node:fs/promises";
 
-export const URL = process.env.CP_URL ?? "none"; // TODO
+export const URL = process.env.CP_URL ?? "none"; // TODO warn when not set
 
 export const IS_IN_DOCKER = process.env?.IN_DOCKER == "1";
 
