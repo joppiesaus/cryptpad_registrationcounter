@@ -3,6 +3,10 @@ import { ProcessOptions, RequestManager, URL, deleteFormResponses, getAmountOfRe
 import { WebDriver } from "selenium-webdriver";
 import { schedule } from "node-cron";
 
+if (!process.env?.TG_TOKEN) {
+    throw Error("TG_TOKEN was not provided");
+}
+
 const bot = new Bot(process.env.TG_TOKEN ?? "none lol");
 
 const reqManager = new RequestManager();
@@ -62,6 +66,21 @@ bot.command("count", async (ctx) => {
     }
 
 });
+
+// bot.command("delete", async (ctx) => {
+
+//     const msg = await ctx.reply("will delete, just a moment...", { parse_mode: "Markdown" });
+
+//     try {
+
+//         await deleteResponses();
+//         await ctx.reply("worked");
+
+//     } catch (e) {
+//         await ctx.reply(`Something went wrong: ${e}. Please check [the results manually](${URL}).`, { parse_mode: "Markdown" } );
+//     }
+
+// });
 
 bot.on("message", async (ctx) => {
     console.log(ctx.message);

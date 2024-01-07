@@ -4,6 +4,10 @@ import fs from "node:fs/promises";
 
 export const URL = process.env.CP_URL ?? "none"; // TODO
 
+export const IS_IN_DOCKER = process.env?.IN_DOCKER == "1";
+
+const DOWNLOAD_DIR = IS_IN_DOCKER ? "vol" : ".";
+
 const REGISTRATION_COLUMN = 2; // the 0-indexed column in the CSV file where you can find the amount of registrations
 const TOTAL_COLUMNS = 4; // the desired amount of columns in the CSV file.
 
@@ -17,11 +21,11 @@ export const getAmountOfRegistrationsByWebpage = async function(driver: WebDrive
 
     let dropdownButton = driver.findElement(By.css(".cp-form-creator-results-controls .cp-dropdown-container .btn.btn-primary"));
 
-    dropdownButton.click();
+    await dropdownButton.click();
 
     let csvDownloadButton = driver.findElement(By.css("a.cp-form-export-csv"));
 
-    csvDownloadButton.click();
+    await csvDownloadButton.click();
 
     let sum = NaN;
 
@@ -29,14 +33,13 @@ export const getAmountOfRegistrationsByWebpage = async function(driver: WebDrive
     // ideally, poll until we find the CSV file(or certain timeout is reached)
     await new Promise(resolve => setTimeout( async () => {
 
-        const filename = `${(await driver.getTitle()).replace(' ', '-')}.csv`;
+        const filename = `${DOWNLOAD_DIR}/${(await driver.getTitle()).replace(' ', '-')}.csv`;
         try {
             sum = await parseCSVFile(filename);
-            console.log(sum);
-            resolve(sum);
+            // console.log(sum);
         } catch (e) {
-            console.log(`Failed to parse CSV file: ${e}`);
-            return NaN;
+            throw Error(`Failed to parse CSV file: ${e}`);
+            // TODO: FAIL don't resolve
         }
 
         try {
@@ -45,6 +48,8 @@ export const getAmountOfRegistrationsByWebpage = async function(driver: WebDrive
         } catch(e) {
             console.log(`Failed to delete CSV file: ${e}`);
         }
+
+        resolve(sum);
 
     }, 200 ));
 
@@ -76,6 +81,8 @@ export const deleteFormResponses = async function(driver: WebDriver) {
 
 export class RequestManager {
 
+    // TODO: remove this boolean as this "lock" is already provided by
+    // the webdriver. this is only a chore and may cause bugs
     private isProcessing: boolean;
 
     constructor() {
@@ -100,15 +107,33 @@ export class RequestManager {
         this.isProcessing = true;
 
         let options = new chrome.Options();
-        options.setUserPreferences({
-            "download.default_directory": process.env.PWD
-        });
-        options.addArguments("--headless=new");
 
-        let driver = await new Builder()
-            .forBrowser("chrome")
-            .setChromeOptions(options)
-            .build();
+        if (!IS_IN_DOCKER) {
+            options.setUserPreferences({
+                "download.default_directory": process.env.PWD + "/" + DOWNLOAD_DIR
+            });
+            options.addArguments("--headless=new");
+        }
+
+        let driver: WebDriver;
+
+        try {
+            if (IS_IN_DOCKER) {
+                driver = await new Builder()
+                    .forBrowser("chrome")
+                    .setChromeOptions(options)
+                    .usingServer("http://selenium_chrome:4444/wd/hub/")
+                    .build();
+            } else {
+                driver = await new Builder()
+                    .forBrowser("chrome")
+                    .setChromeOptions(options)
+                    .build();
+            }
+        } catch (e) {
+            this.isProcessing = false;
+            throw e;
+        }
 
         let result: null | any = null;
 
@@ -161,11 +186,15 @@ export class RequestManager {
         } catch (e) {
 
             console.error(e);
+            await driver.quit();
+            this.isProcessing = false;
             throw e;
 
         } finally {
 
-            await driver.quit();
+            try {
+                await driver.quit();
+            } catch(e) {}
             this.isProcessing = false;
 
         }

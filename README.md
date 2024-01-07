@@ -5,7 +5,7 @@ TODO download chrome webdriver: https://googlechromelabs.github.io/chrome-for-te
 
 NOTE: requires env with a PWD.
 
-TODO CP_URL and TG_TOKEN
+TODO CP_URL and TG_TOKEN, TG_CHANNEL_ID
 
 ```sh
 # tODO: nvm install

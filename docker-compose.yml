@@ -1,0 +1,33 @@
+version: "3.4"
+services:
+  cryptpad_registrationcounter:
+    build:
+      context: ./
+    environment:
+      CP_URL: "${CP_URL}"
+      TG_TOKEN: "${TG_TOKEN}"
+      TG_CHANNEL_ID: "${TG_CHANNEL_ID}"
+    volumes:
+      - downloads:/usr/src/app/vol
+    networks:
+      - cryptpad_regcounter_net
+  selenium_chrome:
+    depends_on:
+      - cryptpad_registrationcounter
+    image: selenium/standalone-chrome:latest
+    volumes:
+      - downloads:/home/seluser/Downloads
+    expose:
+      - 4444
+      - 7900
+    hostname: selenium_chrome
+    networks:
+      - cryptpad_regcounter_net
+    shm_size: "2gb"
+
+
+volumes:
+  downloads:
+
+networks:
+  cryptpad_regcounter_net:
