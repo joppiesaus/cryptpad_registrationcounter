@@ -12,6 +12,7 @@ If you would like the bot to be able to clear the entries:
  2. make it an owner of your cryptpad form
  3. then open developer tools(usually F12) in your browser
  4. go to the terminal and type `JSON.stringify(localStorage)` and copy its output and put it into `credentials.json`
+ 5. BE CAREFUL WITH THIS DATA. This is essentially a key for your entire cryptpad drive. Which is why you should NEVER use your personal account for this.
 
 If you use docker, put the following fields in an `.env` file:
 ```
