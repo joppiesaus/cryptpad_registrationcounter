@@ -12,6 +12,7 @@ ENV IN_DOCKER=1
 
 COPY ["bot.ts", "lib.ts", "./"]
 
-COPY ["credentials*.json", "./"]
+# condtional copy, bot.ts will always copy but credential[s].json is optional
+COPY ["bot.ts", "credential[s].json", "./"]
 
 CMD ["npm", "run", "docker_internal"]
