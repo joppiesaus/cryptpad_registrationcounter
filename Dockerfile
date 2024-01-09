@@ -10,6 +10,8 @@ RUN npm install
 
 ENV IN_DOCKER=1
 
-COPY ["bot.ts", "lib.ts", "credentials.json", "./"]
+COPY ["bot.ts", "lib.ts", "./"]
+
+COPY ["credentials*.json", "./"]
 
 CMD ["npm", "run", "docker_internal"]
