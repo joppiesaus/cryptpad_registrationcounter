@@ -15,4 +15,5 @@ COPY ["bot.ts", "lib.ts", "./"]
 # condtional copy, bot.ts will always copy but credential[s].json is optional
 COPY ["bot.ts", "credential[s].json", "./"]
 
+# weeee run da code
 CMD ["npm", "run", "docker_internal"]
