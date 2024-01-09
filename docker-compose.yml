@@ -7,6 +7,7 @@ services:
       CP_URL: "${CP_URL}"
       TG_TOKEN: "${TG_TOKEN}"
       TG_CHANNEL_ID: "${TG_CHANNEL_ID}"
+      DOCKER_SELENIUM_HOSTNAME: "${DOCKER_SELENIUM_HOSTNAME}"
     volumes:
       - downloads:/usr/src/app/vol
     networks:

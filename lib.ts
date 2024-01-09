@@ -122,7 +122,7 @@ export class RequestManager {
                 driver = await new Builder()
                     .forBrowser("chrome")
                     .setChromeOptions(options)
-                    .usingServer("http://selenium_chrome:4444/wd/hub/")
+                    .usingServer(`http://${ process.env.DOCKER_SELENIUM_HOSTNAME ?? "selenium_chrome" }:4444/wd/hub/`)
                     .build();
             } else {
                 driver = await new Builder()
